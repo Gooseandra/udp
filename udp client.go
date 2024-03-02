@@ -32,6 +32,7 @@ func listener(conn *net.UDPConn) {
 			println("Read data failed:", err.Error())
 			os.Exit(1)
 		}
+		println(string(received))
 	}
 }
 
@@ -50,6 +51,7 @@ func client(ip, port, name string) {
 	}
 
 	var exit chan string
+	conn.Write([]byte(name))
 	go listener(conn)
 	go writer(conn, exit)
 	defer conn.Close()
