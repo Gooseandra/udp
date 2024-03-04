@@ -1,69 +1,44 @@
 package main
 
 import (
-	"bufio"
+	"fmt"
 	"net"
-	"os"
 )
 
-func writer(conn *net.UDPConn, mes chan string) {
+func client(a, s, d string) {
+	// Определение адреса широковещательной рассылки и порта
+	serverAddr, err := net.ResolveUDPAddr("udp", ":2002")
+	if err != nil {
+		fmt.Println("Error resolving server address:", err)
+		return
+	}
+
+	// Установка соединения с сервером
+	conn, err := net.ListenUDP("udp", serverAddr)
+	if err != nil {
+		fmt.Println("Error connecting to server:", err)
+		return
+	}
+	defer conn.Close()
+
+	servAddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:2000")
+	if err != nil {
+		fmt.Println("Error resolving server address:", err)
+		return
+	}
+
+	fmt.Println("Client connected to server")
+	conn.WriteToUDP([]byte("fdd"), servAddr)
+	// Цикл для приема сообщений от сервера
+	buffer := make([]byte, 1024)
+	fmt.Println(conn)
 	for {
-		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-		if text == "exit" {
-			mes <- text
+		n, addr, err := conn.ReadFromUDP(buffer)
+		if err != nil {
+			fmt.Println("Error reading from server:", err)
 			return
 		}
-		conn.Write([]byte(text))
+
+		fmt.Printf("Received message from server %s: %s\n", addr, string(buffer[:n]))
 	}
-}
-
-func listener(conn *net.UDPConn) {
-	for {
-		//message, err := bufio.NewReader(conn).ReadString('\n')
-		//if err != nil {
-		//	fmt.Println(err.Error())
-		//	return
-		//}
-		//fmt.Println(message)
-		received := make([]byte, 1024)
-		_, err := conn.Read(received)
-		if err != nil {
-			println("Read data failed:", err.Error())
-			os.Exit(1)
-		}
-		println(string(received))
-	}
-}
-
-func client(ip, port, name string) {
-	udpServer, err := net.ResolveUDPAddr("udp", ":8080")
-
-	if err != nil {
-		println("ResolveUDPAddr failed:", err.Error())
-		os.Exit(1)
-	}
-
-	conn, err := net.DialUDP("udp", nil, udpServer)
-	if err != nil {
-		println("Listen failed:", err.Error())
-		os.Exit(1)
-	}
-
-	var exit chan string
-	conn.Write([]byte(name))
-	go listener(conn)
-	go writer(conn, exit)
-	defer conn.Close()
-	<-exit
-	// buffer to get data
-
-	//received := make([]byte, 1024)
-	//_, err = conn.Read(received)
-	//if err != nil {
-	//	println("Read data failed:", err.Error())
-	//	os.Exit(1)
-	//}
-	//
-	//println(string(received))
 }
